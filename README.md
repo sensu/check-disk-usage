@@ -50,7 +50,8 @@ Use "check-disk-usage [command] --help" for more information about a command.
 ### Usage notes
 
 * The include and exclude options for both file system type and path are
-mutually exclusive.
+mutually exclusive (e.g. you can not use --exclude-fs-type and
+--include-fs-type on the same check).
 * The file system path on Linux/UNIX/macOS systems means the file system mount
 point (e.g. /, /tmp, /home)
 * The file system path on Windows refers to the drive letter (e.g. C:, D:).
