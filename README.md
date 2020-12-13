@@ -62,7 +62,7 @@ specified as such (e.g. NTFS, C:)
 
 ### Asset registration
 
-[Sensu Assets][10] are the best way to make use of this plugin. If you're not
+[Sensu Assets][4] are the best way to make use of this plugin. If you're not
 using an asset, please consider doing so! If you're using sensuctl 5.13 with
 Sensu Backend 5.13 or later, you can use the following command to add the asset:
 
@@ -137,3 +137,4 @@ For more information about contributing to this plugin, see [Contributing][1].
 [1]: https://github.com/sensu/sensu-go/blob/master/CONTRIBUTING.md
 [2]: https://docs.sensu.io/sensu-go/latest/reference/checks/
 [3]: https://bonsai.sensu.io/assets/nixwiz/check-disk-usage
+[4]: https://docs.sensu.io/sensu-go/latest/reference/assets/
