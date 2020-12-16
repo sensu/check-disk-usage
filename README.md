@@ -42,6 +42,9 @@ Flags:
   -E, --exclude-fs-path strings   Comma separated list of file system paths to exclude from checking
   -w, --warning float             Warning threshold for file system usage (default 85)
   -c, --critical float            Critical threshold for file system usage (default 95)
+  -m, --magic float               Magic factor to adjust warning/critical thresholds (example: 0.9, 1.0 == no adjustment) (default 1)
+  -M, --minimum float             Volumes under this size (in GB) will not be adjusted by magic factor (default 100)
+  -n, --normal float              Thresholds are not adjusted for filesystems of exactly this size, thresholds are reduced for smaller and increased for larger (default 20)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.

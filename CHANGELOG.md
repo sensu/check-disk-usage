@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+- Magic factor adjustment
+
 ## [0.1.0] - 2020-12-14
 
 ### Added

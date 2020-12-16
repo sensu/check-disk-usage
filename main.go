@@ -2,17 +2,13 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	human "github.com/dustin/go-humanize"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
 	"github.com/shirou/gopsutil/disk"
 )
-
-// TODO
-// 1. Magic factor for larger file systems
-// 2. Metrics output (--metrics, --metrics-only)
-// 3. inodes?
 
 // Config represents the check plugin config.
 type Config struct {
@@ -23,6 +19,9 @@ type Config struct {
 	ExcludeFSPath []string
 	Warning       float64
 	Critical      float64
+	Normal        float64
+	Magic         float64
+	Minimum       float64
 }
 
 var (
@@ -89,6 +88,33 @@ var (
 			Usage:     "Critical threshold for file system usage",
 			Value:     &plugin.Critical,
 		},
+		&sensu.PluginConfigOption{
+			Path:      "normal",
+			Env:       "",
+			Argument:  "normal",
+			Shorthand: "n",
+			Default:   float64(20),
+			Usage:     "Thresholds are not adjusted for filesystems of exactly this size, thresholds are reduced for smaller and increased for larger",
+			Value:     &plugin.Normal,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "magic",
+			Env:       "",
+			Argument:  "magic",
+			Shorthand: "m",
+			Default:   float64(1.0),
+			Usage:     "Magic factor to adjust warning/critical thresholds (example: 0.9, 1.0 == no adjustment)",
+			Value:     &plugin.Magic,
+		},
+		&sensu.PluginConfigOption{
+			Path:      "minimum",
+			Env:       "",
+			Argument:  "minimum",
+			Shorthand: "M",
+			Default:   float64(100),
+			Usage:     "Volumes under this size (in GB) will not be adjusted by magic factor",
+			Value:     &plugin.Minimum,
+		},
 	}
 )
 
@@ -112,8 +138,10 @@ func checkArgs(event *types.Event) (int, error) {
 
 func executeCheck(event *types.Event) (int, error) {
 	var (
-		criticals int
-		warnings  int
+		criticals       int
+		warnings        int
+		criticalPercent float64
+		warningPercent  float64
 	)
 
 	parts, _ := disk.Partitions(true)
@@ -137,12 +165,20 @@ func executeCheck(event *types.Event) (int, error) {
 			continue
 		}
 
-		// implement magic factor for larger file systems?
+		// Magic factor adjustment
+		if float64(s.Total) < (plugin.Minimum * 1000000000) {
+			criticalPercent = plugin.Critical
+			warningPercent = plugin.Warning
+		} else {
+			criticalPercent = adjustPercent(s.Total, plugin.Critical)
+			warningPercent = adjustPercent(s.Total, plugin.Warning)
+		}
+
 		fmt.Printf("%s ", plugin.PluginConfig.Name)
-		if s.UsedPercent >= plugin.Critical {
+		if s.UsedPercent >= criticalPercent {
 			criticals++
 			fmt.Printf("CRITICAL: ")
-		} else if s.UsedPercent >= plugin.Warning {
+		} else if s.UsedPercent >= warningPercent {
 			warnings++
 			fmt.Printf(" WARNING: ")
 		} else {
@@ -195,4 +231,11 @@ func contains(a []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func adjustPercent(size uint64, percent float64) float64 {
+	hsize := (float64(size) / (1024.0 * 1024.0)) / plugin.Normal
+	felt := math.Pow(hsize, plugin.Magic)
+	scale := felt / hsize
+	return 100 - ((100 - percent) * scale)
 }
