@@ -7,6 +7,13 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+- Added flags --include-pseudo-fs and --fail-on-error
+
+### Changed
+- Changed the behavior for failures to get fs usage based on flag
+- Changed call to get partitions to use --include-pseudo-fs flag
+
 ## [0.1.1] - 2020-12-29
 
 ### Change

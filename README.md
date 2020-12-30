@@ -42,6 +42,8 @@ Flags:
   -E, --exclude-fs-path strings   Comma separated list of file system paths to exclude from checking
   -w, --warning float             Warning threshold for file system usage (default 85)
   -c, --critical float            Critical threshold for file system usage (default 95)
+  -p, --include-pseudo-fs         Include pseudo-filesystems (e.g. tmpfs) (default false)
+  -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -50,14 +52,22 @@ Use "check-disk-usage [command] --help" for more information about a command.
 ### Usage notes
 
 * The include and exclude options for both file system type and path are
-mutually exclusive (e.g. you can not use --exclude-fs-type and
---include-fs-type on the same check).
+mutually exclusive (e.g. you can not use `--exclude-fs-type` and
+`--include-fs-type` on the same check).
 * The file system path on Linux/UNIX/macOS systems means the file system mount
 point (e.g. /, /tmp, /home)
 * The file system path on Windows refers to the drive letter (e.g. C:, D:).
 Volumes mounted via UNC paths are not checked.
 * File system types and paths on Windows are capitalized and need to be
 specified as such (e.g. NTFS, C:)
+* The `--include-pseudo-fs` option is false by default meaning that on Linux
+systems file system with types such as tmpfs (e.g. /dev, /run, etc.) will
+be ignored. This takes precedence over any explicit includes or excludes.
+* The `--fail-on-error` option determines what occurs if the check encounters an
+error, such as `permission denied` for a file system.  If true, the check will
+exit with as a critical failure and provide the error message.  If false (the
+defaut), it will specify unknown for that file system, provide the error and
+continue to check the remaining file systems as expected.
 
 ## Configuration
 
