@@ -7,6 +7,11 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.3.1] - 2020-12-30
+
+### Changed
+- Added newline to end of UNKNOWN error output
+
 ## [0.3.0] - 2020-12-30
 
 ### Changed

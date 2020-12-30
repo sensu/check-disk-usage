@@ -153,7 +153,7 @@ func executeCheck(event *types.Event) (int, error) {
 			if plugin.FailOnError {
 				return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
 			}
-			fmt.Printf("%s  UNKNOWN: %s - error: %v", plugin.PluginConfig.Name, device, err)
+			fmt.Printf("%s  UNKNOWN: %s - error: %v\n", plugin.PluginConfig.Name, device, err)
 			continue
 		}
 
