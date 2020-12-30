@@ -9,11 +9,6 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
-// TODO
-// 1. Magic factor for larger file systems
-// 2. Metrics output (--metrics, --metrics-only)
-// 3. inodes?
-
 // Config represents the check plugin config.
 type Config struct {
 	sensu.PluginConfig
@@ -116,11 +111,17 @@ func executeCheck(event *types.Event) (int, error) {
 		warnings  int
 	)
 
-	parts, _ := disk.Partitions(true)
+	parts, err := disk.Partitions(true)
+	if err != nil {
+		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partions, error: %v", err)
+	}
 
 	for _, p := range parts {
 		device := p.Mountpoint
-		s, _ := disk.Usage(device)
+		s, err := disk.Usage(device)
+		if err != nil {
+			return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
+		}
 
 		// Ignore empty file systems
 		if s.Total == 0 {
