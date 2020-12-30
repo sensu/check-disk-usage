@@ -137,6 +137,16 @@ func executeCheck(event *types.Event) (int, error) {
 	}
 
 	for _, p := range parts {
+		// Ignore excluded (or non-included) file system types
+		if !isValidFSType(p.Fstype) {
+			continue
+		}
+
+		// Ignore excluded (or non-included) file systems
+		if !isValidFSPath(p.Mountpoint) {
+			continue
+		}
+
 		device := p.Mountpoint
 		s, err := disk.Usage(device)
 		if err != nil {
@@ -149,16 +159,6 @@ func executeCheck(event *types.Event) (int, error) {
 
 		// Ignore empty file systems
 		if s.Total == 0 {
-			continue
-		}
-
-		// Ignore excluded (or non-included) file system types
-		if !isValidFSType(p.Fstype) {
-			continue
-		}
-
-		// Ignore excluded (or non-included) file systems
-		if !isValidFSPath(p.Mountpoint) {
 			continue
 		}
 
