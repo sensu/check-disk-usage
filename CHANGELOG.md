@@ -7,6 +7,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.2.0] - 2020-12-30
+
 ### Added
 - Added flags --include-pseudo-fs and --fail-on-error
 
