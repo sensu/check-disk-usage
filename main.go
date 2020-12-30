@@ -18,6 +18,8 @@ type Config struct {
 	ExcludeFSPath []string
 	Warning       float64
 	Critical      float64
+	IncludePseudo bool
+	FailOnError   bool
 }
 
 var (
@@ -30,7 +32,7 @@ var (
 	}
 
 	options = []*sensu.PluginConfigOption{
-		&sensu.PluginConfigOption{
+		{
 			Path:      "include-fs-type",
 			Env:       "",
 			Argument:  "include-fs-type",
@@ -39,7 +41,7 @@ var (
 			Usage:     "Comma separated list of file system types to check",
 			Value:     &plugin.IncludeFSType,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:      "exclude-fs-type",
 			Env:       "",
 			Argument:  "exclude-fs-type",
@@ -48,7 +50,7 @@ var (
 			Usage:     "Comma separated list of file system types to exclude from checking",
 			Value:     &plugin.ExcludeFSType,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:      "include-fs-path",
 			Env:       "",
 			Argument:  "include-fs-path",
@@ -57,7 +59,7 @@ var (
 			Usage:     "Comma separated list of file system paths to check",
 			Value:     &plugin.IncludeFSPath,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:      "exclude-fs-path",
 			Env:       "",
 			Argument:  "exclude-fs-path",
@@ -66,7 +68,7 @@ var (
 			Usage:     "Comma separated list of file system paths to exclude from checking",
 			Value:     &plugin.ExcludeFSPath,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:      "warning",
 			Env:       "",
 			Argument:  "warning",
@@ -75,7 +77,7 @@ var (
 			Usage:     "Warning threshold for file system usage",
 			Value:     &plugin.Warning,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:      "critical",
 			Env:       "",
 			Argument:  "critical",
@@ -83,6 +85,24 @@ var (
 			Default:   float64(95),
 			Usage:     "Critical threshold for file system usage",
 			Value:     &plugin.Critical,
+		},
+		{
+			Path:      "include-pseudo-fs",
+			Env:       "",
+			Argument:  "include-pseudo-fs",
+			Shorthand: "p",
+			Default:   false,
+			Usage:     "Include pseudo-filesystems (e.g. tmpfs) (default false)",
+			Value:     &plugin.IncludePseudo,
+		},
+		{
+			Path:      "fail-on-error",
+			Env:       "",
+			Argument:  "fail-on-error",
+			Shorthand: "f",
+			Default:   false,
+			Usage:     "Fail and exit on errors getting file system usage (e.g. permission denied) (default false)",
+			Value:     &plugin.FailOnError,
 		},
 	}
 )
@@ -111,7 +131,7 @@ func executeCheck(event *types.Event) (int, error) {
 		warnings  int
 	)
 
-	parts, err := disk.Partitions(true)
+	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
 		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partions, error: %v", err)
 	}
@@ -120,7 +140,11 @@ func executeCheck(event *types.Event) (int, error) {
 		device := p.Mountpoint
 		s, err := disk.Usage(device)
 		if err != nil {
-			return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
+			if plugin.FailOnError {
+				return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
+			}
+			fmt.Printf("%s  UNKNOWN: %s - error: %v", plugin.PluginConfig.Name, device, err)
+			continue
 		}
 
 		// Ignore empty file systems
