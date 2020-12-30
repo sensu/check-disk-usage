@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+- Moved included/excluded checks against partition information up before querying usage
+
 ## [0.2.0] - 2020-12-30
 
 ### Added
