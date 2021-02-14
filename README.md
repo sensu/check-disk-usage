@@ -43,6 +43,7 @@ Flags:
   -w, --warning float             Warning threshold for file system usage (default 85)
   -c, --critical float            Critical threshold for file system usage (default 95)
   -p, --include-pseudo-fs         Include pseudo-filesystems (e.g. tmpfs) (default false)
+  -r, --include-read-only         Include read-only filesystems (default false)
   -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
   -h, --help                      help for check-disk-usage
 
@@ -63,6 +64,8 @@ specified as such (e.g. NTFS, C:)
 * The `--include-pseudo-fs` option is false by default meaning that on Linux
 systems file system with types such as tmpfs (e.g. /dev, /run, etc.) will
 be ignored. This takes precedence over any explicit includes or excludes.
+* The `--include-read-only` checks for the `ro` mount option on Linux and the
+`read-only` mount option on macOS. Support for Windows has not been implemented.
 * The `--fail-on-error` option determines what occurs if the check encounters an
 error, such as `permission denied` for a file system.  If true, the check will
 exit with as a critical failure and provide the error message.  If false (the
