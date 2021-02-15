@@ -65,7 +65,10 @@ specified as such (e.g. NTFS, C:)
 systems file system with types such as tmpfs (e.g. /dev, /run, etc.) will
 be ignored. This takes precedence over any explicit includes or excludes.
 * The `--include-read-only` checks for the `ro` mount option on Linux and the
-`read-only` mount option on macOS. Support for Windows has not been implemented.
+`read-only` mount option on macOS and read-only volumes on Windows.  The
+rationale being that if a monitored system does not have write access to a file
+system, it cannot be used to create files (not the source of the problem) nor
+can it be used to clean up the file system (not a part of the solution).
 * The `--fail-on-error` option determines what occurs if the check encounters an
 error, such as `permission denied` for a file system.  If true, the check will
 exit with as a critical failure and provide the error message.  If false (the

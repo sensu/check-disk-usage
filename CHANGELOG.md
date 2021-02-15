@@ -7,6 +7,13 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.1] - 2021-02-14
+
+### Changed
+- Fixed README re: read-only
+
+## [0.4.0] - 2021-02-14
+
 ### Added
 - Added --include-read-only option to support ignoring read-only file systems
 
