@@ -231,7 +231,7 @@ func isValidFSPath(fsPath string) bool {
 
 func isReadOnly(mountOpts string) bool {
 	mOpts := strings.Split(mountOpts, ",")
-	// This covers Linux and macOS, is there something for Windows?
+	// "ro" covers Linux and Windows, "read-only" covers macOS
 	if contains(mOpts, "ro") || contains(mOpts, "read-only") {
 		return true
 	}
