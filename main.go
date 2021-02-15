@@ -202,7 +202,7 @@ func executeCheck(event *types.Event) (int, error) {
 }
 
 func isValidFSType(fsType string) bool {
-	// should i account for case insensitve searches for windows (ntfs vs. NTFS)?
+	// should i account for case insensitive searches for windows (ntfs vs. NTFS)?
 	if len(plugin.IncludeFSType) > 0 && contains(plugin.IncludeFSType, fsType) {
 		return true
 	} else if len(plugin.IncludeFSType) > 0 {
