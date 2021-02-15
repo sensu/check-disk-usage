@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	human "github.com/dustin/go-humanize"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
@@ -12,14 +13,15 @@ import (
 // Config represents the check plugin config.
 type Config struct {
 	sensu.PluginConfig
-	IncludeFSType []string
-	ExcludeFSType []string
-	IncludeFSPath []string
-	ExcludeFSPath []string
-	Warning       float64
-	Critical      float64
-	IncludePseudo bool
-	FailOnError   bool
+	IncludeFSType   []string
+	ExcludeFSType   []string
+	IncludeFSPath   []string
+	ExcludeFSPath   []string
+	Warning         float64
+	Critical        float64
+	IncludePseudo   bool
+	IncludeReadOnly bool
+	FailOnError     bool
 }
 
 var (
@@ -104,6 +106,15 @@ var (
 			Usage:     "Fail and exit on errors getting file system usage (e.g. permission denied) (default false)",
 			Value:     &plugin.FailOnError,
 		},
+		{
+			Path:      "include-read-only",
+			Env:       "",
+			Argument:  "include-read-only",
+			Shorthand: "r",
+			Default:   false,
+			Usage:     "Include read-only filesystems (default false)",
+			Value:     &plugin.IncludeReadOnly,
+		},
 	}
 )
 
@@ -144,6 +155,11 @@ func executeCheck(event *types.Event) (int, error) {
 
 		// Ignore excluded (or non-included) file systems
 		if !isValidFSPath(p.Mountpoint) {
+			continue
+		}
+
+		// Ignore read-only file systems?
+		if !plugin.IncludeReadOnly && isReadOnly(p.Opts) {
 			continue
 		}
 
@@ -211,6 +227,16 @@ func isValidFSPath(fsPath string) bool {
 
 	// either not in exclude list or neither list is specified
 	return true
+}
+
+func isReadOnly(mountOpts string) bool {
+	mOpts := strings.Split(mountOpts, ",")
+	// "ro" should cover Linux, macOS, and Windows, "read-only" is reportd by mount(8)
+	// on macOS so check for it, just in case
+	if contains(mOpts, "ro") || contains(mOpts, "read-only") {
+		return true
+	}
+	return false
 }
 
 func contains(a []string, s string) bool {
