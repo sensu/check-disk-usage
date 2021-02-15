@@ -144,7 +144,7 @@ func executeCheck(event *types.Event) (int, error) {
 
 	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
-		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partions, error: %v", err)
+		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partitions, error: %v", err)
 	}
 
 	for _, p := range parts {
