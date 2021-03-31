@@ -55,7 +55,7 @@ Use "check-disk-usage [command] --help" for more information about a command.
 * The include and exclude options for both file system type and path are
 mutually exclusive (e.g. you can not use `--exclude-fs-type` and
 `--include-fs-type` on the same check).
-* The file system path on Linux/UNIX/macOS systems means the file system mount
+* The file system path on Linux/Unix/macOS systems means the file system mount
 point (e.g. /, /tmp, /home)
 * The file system path on Windows refers to the drive letter (e.g. C:, D:).
 Volumes mounted via UNC paths are not checked.
@@ -85,7 +85,7 @@ using an asset, please consider doing so! If you're using sensuctl 5.13 with
 Sensu Backend 5.13 or later, you can use the following command to add the asset:
 
 ```
-sensuctl asset add nixwiz/check-disk-usage
+sensuctl asset add sensu/check-disk-usage
 ```
 
 If you're using an earlier version of sensuctl, you can find the asset on the [Bonsai Asset Index][3].
@@ -111,7 +111,7 @@ spec:
   subscriptions:
   - system
   runtime_assets:
-  - nixwiz/check-disk-usage
+  - sensu/check-disk-usage
 ```
 
 #### Windows example
@@ -132,7 +132,7 @@ spec:
   subscriptions:
   - system
   runtime_assets:
-  - nixwiz/check-disk-usage
+  - sensu/check-disk-usage
 ```
 
 ## Installation from source
@@ -154,5 +154,5 @@ For more information about contributing to this plugin, see [Contributing][1].
 
 [1]: https://github.com/sensu/sensu-go/blob/master/CONTRIBUTING.md
 [2]: https://docs.sensu.io/sensu-go/latest/reference/checks/
-[3]: https://bonsai.sensu.io/assets/nixwiz/check-disk-usage
+[3]: https://bonsai.sensu.io/assets/sensu/check-disk-usage
 [4]: https://docs.sensu.io/sensu-go/latest/reference/assets/
