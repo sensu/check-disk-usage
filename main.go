@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+    "strconv"
 
 	human "github.com/dustin/go-humanize"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
@@ -22,6 +23,7 @@ type Config struct {
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
+    InodeMode       bool
 }
 
 var (
@@ -115,6 +117,16 @@ var (
 			Usage:     "Include read-only filesystems (default false)",
 			Value:     &plugin.IncludeReadOnly,
 		},
+		{
+			Path:      "inode-mode",
+			Env:       "",
+			Argument:  "inode-mode",
+			Shorthand: "j",
+			Default:   false,
+			Usage:     "Inode mode, check usage of inode (default false)",
+			Value:     &plugin.InodeMode,
+		},
+
 	}
 )
 
@@ -178,19 +190,37 @@ func executeCheck(event *types.Event) (int, error) {
 			continue
 		}
 
-		// implement magic factor for larger file systems?
-		fmt.Printf("%s ", plugin.PluginConfig.Name)
-		if s.UsedPercent >= plugin.Critical {
-			criticals++
-			fmt.Printf("CRITICAL: ")
-		} else if s.UsedPercent >= plugin.Warning {
-			warnings++
-			fmt.Printf(" WARNING: ")
+        if plugin.InodeMode {
+
+			// implement magic factor for larger file systems?
+			fmt.Printf("%s ", plugin.PluginConfig.Name)
+			if s.InodesUsedPercent >= plugin.Critical {
+				criticals++
+				fmt.Printf("CRITICAL: ")
+			} else if s.InodesUsedPercent >= plugin.Warning {
+				warnings++
+				fmt.Printf(" WARNING: ")
+			} else {
+				fmt.Printf("      OK: ")
+			}
+			fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.InodesUsedPercent, strconv.FormatUint(s.InodesTotal, 10), strconv.FormatUint(s.InodesUsed, 10), strconv.FormatUint(s.InodesFree, 10))
 		} else {
-			fmt.Printf("      OK: ")
+
+			// implement magic factor for larger file systems?
+			fmt.Printf("%s ", plugin.PluginConfig.Name)
+			if s.UsedPercent >= plugin.Critical {
+				criticals++
+				fmt.Printf("CRITICAL: ")
+			} else if s.UsedPercent >= plugin.Warning {
+				warnings++
+				fmt.Printf(" WARNING: ")
+			} else {
+				fmt.Printf("      OK: ")
+			}
+			fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
 		}
-		fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
-	}
+
+    }
 
 	if criticals > 0 {
 		return sensu.CheckStateCritical, nil

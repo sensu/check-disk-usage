@@ -45,6 +45,7 @@ Flags:
   -p, --include-pseudo-fs         Include pseudo-filesystems (e.g. tmpfs) (default false)
   -r, --include-read-only         Include read-only filesystems (default false)
   -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
+  -j, --inode-mode                Inode mode, check usage of inode (default false)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -75,6 +76,7 @@ error, such as `permission denied` for a file system.  If true, the check will
 exit with as a critical failure and provide the error message.  If false (the
 defaut), it will specify unknown for that file system, provide the error and
 continue to check the remaining file systems as expected.
+* The `--inode-mode` option check inode information instead of block usage
 
 ## Configuration
 
