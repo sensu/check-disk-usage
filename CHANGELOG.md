@@ -7,6 +7,11 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.6.0] - 2021-04-16
+
+### Added
+- Added --inode-mode option to monitore inode information instead of block usage (df -i)
+
 ## [0.4.2] - 2021-03-31
 
 ### Changed
