@@ -22,7 +22,7 @@ type Config struct {
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
-    HumanReadable   bool
+	HumanReadable   bool
 }
 
 var (
@@ -125,7 +125,6 @@ var (
 			Usage:     "print sizes in powers of 1024 (default false)",
 			Value:     &plugin.HumanReadable,
 		},
-
 	}
 )
 
@@ -200,11 +199,11 @@ func executeCheck(event *types.Event) (int, error) {
 		} else {
 			fmt.Printf("      OK: ")
 		}
-        if plugin.HumanReadable {
-		    fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
-        } else {
-            fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
-        }
+		if plugin.HumanReadable {
+			fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
+		} else {
+			fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
+		}
 	}
 
 	if criticals > 0 {
