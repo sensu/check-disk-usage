@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Changed
+- Implement magic scaling factor for large filesystems similar to original ruby plugin.
+
 ## [0.4.2] - 2021-03-31
 
 ### Changed
