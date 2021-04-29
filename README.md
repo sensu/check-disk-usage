@@ -48,6 +48,7 @@ Flags:
   -m, --magic float               Magic factor to adjust warn/crit thresholds. Example: .9 (default 1)
   -l, --minimum float             Minimum size to adjust (in GiB) (default 100)
   -n, --normal float              Value in GiB. Levels are not adapted for filesystems of exactly this size, where levels are reduced for smaller filesystems and raised for larger filesystems. (default 20)
+  -H, --human-readable            print sizes in powers of 1024 (default false)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -78,6 +79,9 @@ error, such as `permission denied` for a file system.  If true, the check will
 exit with as a critical failure and provide the error message.  If false (the
 defaut), it will specify unknown for that file system, provide the error and
 continue to check the remaining file systems as expected.
+* The `--human-readable` (False by default) option determines if you prefer
+to display sizes of different drives in a human format. (Like df Unix/linux
+command.)
 * The `--magic`, `--normal`, and `--minimum` options work together to adjust 
 thresholds for larger filesystems. When a filesystem is larger than `--minimum` 
 the `--magic` scaling factor is used. For filesystems larger than `--normal` a magic scaling 
