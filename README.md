@@ -45,6 +45,9 @@ Flags:
   -p, --include-pseudo-fs         Include pseudo-filesystems (e.g. tmpfs) (default false)
   -r, --include-read-only         Include read-only filesystems (default false)
   -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
+  -m, --magic float               Magic factor to adjust warn/crit thresholds. Example: .9 (default 1)
+  -l, --minimum float             Minimum size to adjust (in GB) (default 100)
+  -n, --normal float              Value in GB. Levels are not adapted for filesystems of exactly this size, where levels are reduced for smaller filesystems and raised for larger filesystems. (default 20)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -75,6 +78,27 @@ error, such as `permission denied` for a file system.  If true, the check will
 exit with as a critical failure and provide the error message.  If false (the
 defaut), it will specify unknown for that file system, provide the error and
 continue to check the remaining file systems as expected.
+* The `--magic`, `--normal`, and `--minimum` options work together to adjust 
+thresholds for larger filesystems. When a filesystem is larger than `--minimum` 
+the `--magic` scaling factor is used. For filesystems larger than `--normal` a magic scaling 
+factor less than 1 increases warning and critical thresholds. On filesystems
+smaller than `--normal`, a magic scaling factor less than 1 descreases thesholds.
+The idea being there's a bit more/less margin available for filesystems 
+larger/smaller relative to `--normal` based on similar data accomulation patterns, so the magic scaling factor lets you set a `normal` threshold and adjust the warning and critical thresholds up or down using a calculation.  The default `--magic` value, 1.0, will not adapt threshold percentages for volumes. 
+
+#### Magic Scaling Calculation
+
+```
+normalized_disk_size = disk_size_GB/normal_size_GB
+rescaled_disk_size = (normalized_disk_size)^magic_scale_factor
+scale = rescaled_disk_size / normalized_disk_size
+new_percent_threhold = 100.0 - ((100.0 - original_percent_threshold) * scale)
+```
+
+* For disks larger than `--normal` and `--magic` values less than 1, 
+result in `scale < 1` and `new_percent_threshold > original_percent_threshold`  
+* For disks smaller than `--normal`and `--magic` values less than 1 result in `scale > 1` 
+result in `scale > 1` and `new_percent_threshold < original_percent_threshold`  
 
 ## Configuration
 
