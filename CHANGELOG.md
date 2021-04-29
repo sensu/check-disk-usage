@@ -7,8 +7,6 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
-## [0.5.0] - 2021-04-16
-
 ### Added
 - Added --human-readable option to support ignoring human-readable option like df unix/linux command
 
