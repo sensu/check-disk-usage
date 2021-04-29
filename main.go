@@ -140,8 +140,9 @@ func executeCheck(event *types.Event) (int, error) {
 	var (
 		criticals int
 		warnings  int
+		perfData  string
 	)
-
+	perfData = ""
 	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
 		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partitions, error: %v", err)
@@ -190,14 +191,17 @@ func executeCheck(event *types.Event) (int, error) {
 			fmt.Printf("      OK: ")
 		}
 		fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
+		perfData = fmt.Sprintf("%s %s_%%used=%.2f", perfData, p.Mountpoint, s.UsedPercent)
 	}
 
 	if criticals > 0 {
+		fmt.Printf("%s       Critical: Disk usage | %s\n", plugin.PluginConfig.Name, perfData)
 		return sensu.CheckStateCritical, nil
 	} else if warnings > 0 {
+		fmt.Printf("%s       Warning: Disk usage | %s\n", plugin.PluginConfig.Name, perfData)
 		return sensu.CheckStateWarning, nil
 	}
-
+	fmt.Printf("%s       OK: Disk usage | %s\n", plugin.PluginConfig.Name, perfData)
 	return sensu.CheckStateOK, nil
 }
 
