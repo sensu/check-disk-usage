@@ -46,8 +46,8 @@ Flags:
   -r, --include-read-only         Include read-only filesystems (default false)
   -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
   -m, --magic float               Magic factor to adjust warn/crit thresholds. Example: .9 (default 1)
-  -l, --minimum float             Minimum size to adjust (in GB) (default 100)
-  -n, --normal float              Value in GB. Levels are not adapted for filesystems of exactly this size, where levels are reduced for smaller filesystems and raised for larger filesystems. (default 20)
+  -l, --minimum float             Minimum size to adjust (in GiB) (default 100)
+  -n, --normal float              Value in GiB. Levels are not adapted for filesystems of exactly this size, where levels are reduced for smaller filesystems and raised for larger filesystems. (default 20)
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -89,7 +89,7 @@ larger/smaller relative to `--normal` based on similar data accomulation pattern
 #### Magic Scaling Calculation
 
 ```
-normalized_disk_size = disk_size_GB/normal_size_GB
+normalized_disk_size = disk_size_GiB/normal_size_GiB
 rescaled_disk_size = (normalized_disk_size)^magic_scale_factor
 scale = rescaled_disk_size / normalized_disk_size
 new_percent_threhold = 100.0 - ((100.0 - original_percent_threshold) * scale)

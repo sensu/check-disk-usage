@@ -20,9 +20,9 @@ type Config struct {
 	ExcludeFSPath   []string
 	Warning         float64
 	Critical        float64
-	NormalGB        float64
+	NormalGiB       float64
 	Magic           float64
-	MinimumGB       float64
+	MinimumGiB      float64
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
@@ -98,10 +98,10 @@ var (
 			Argument:  "normal",
 			Shorthand: "n",
 			Default:   float64(20),
-			Usage: `Value in GB. Levels are not adapted for filesystems of exactly this ` +
+			Usage: `Value in GiB. Levels are not adapted for filesystems of exactly this ` +
 				`size, where levels are reduced for smaller filesystems and raised ` +
 				`for larger filesystems.`,
-			Value: &plugin.NormalGB,
+			Value: &plugin.NormalGiB,
 		},
 		{
 			Path:      "magic",
@@ -118,8 +118,8 @@ var (
 			Argument:  "minimum",
 			Shorthand: "l",
 			Default:   float64(100),
-			Usage:     `Minimum size to adjust (in GB)`,
-			Value:     &plugin.MinimumGB,
+			Usage:     `Minimum size to adjust (in GiB)`,
+			Value:     &plugin.MinimumGiB,
 		},
 		{
 			Path:      "include-pseudo-fs",
@@ -215,7 +215,7 @@ func executeCheck(event *types.Event) (int, error) {
 		tot := float64(s.Total)
 		bcrit := plugin.Critical
 		bwarn := plugin.Warning
-		if tot > (plugin.MinimumGB * math.Pow(1024, 3)) {
+		if tot > (plugin.MinimumGiB * math.Pow(1024, 3)) {
 			bcrit = adjPercent(tot, plugin.Critical)
 			bwarn = adjPercent(tot, plugin.Warning)
 		}
@@ -290,7 +290,7 @@ func contains(a []string, s string) bool {
 }
 
 func adjPercent(sizeInBytes float64, percent float64) float64 {
-	hsize := (sizeInBytes / math.Pow(1024.0, 3)) / plugin.NormalGB
+	hsize := (sizeInBytes / math.Pow(1024.0, 3)) / plugin.NormalGiB
 	felt := math.Pow(hsize, plugin.Magic)
 	scale := felt / hsize
 	return 100.0 - ((100.0 - percent) * scale)
