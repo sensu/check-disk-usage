@@ -46,6 +46,9 @@ Flags:
   -r, --include-read-only         Include read-only filesystems (default false)
   -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
   -H, --human-readable            print sizes in powers of 1024 (default false)
+      --metrics                   Output metrics instead of human readable output
+      --metrics-format string     Metrics output format, supports opentsdb_line or prometheus_text (default "opentsdb_line")
+      --tags strings              Comma separated list of additional metrics tags using key=value format.
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.
@@ -79,6 +82,7 @@ continue to check the remaining file systems as expected.
 * The `--human-readable` (False by default) option determines if you prefer
 to display sizes of different drives in a human format. (Like df Unix/linux
 command.)
+* The `--metrics` (False by default) option will change text output to conform to selected metrics format (`--metrics-format`)
 
 ## Configuration
 
