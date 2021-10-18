@@ -237,13 +237,13 @@ func executeCheck(event *types.Event) (int, error) {
 		"disk.critical": &MetricGroup{
 			Name:    "disk.critical",
 			Type:    "GAUGE",
-			Comment: "non-zero value indicates mountpoint is in critical state",
+			Comment: "non-zero value indicates mountpoint usage is above critical threshold",
 			Metrics: []Metric{},
 		},
 		"disk.warning": &MetricGroup{
 			Name:    "disk.warning",
 			Type:    "GAUGE",
-			Comment: "non-zero value indicates mountpoint is in warning state",
+			Comment: "non-zero value indicates mountpoint usage is above warning threshold",
 			Metrics: []Metric{},
 		},
 		"disk.percent_used": &MetricGroup{
@@ -311,32 +311,27 @@ func executeCheck(event *types.Event) (int, error) {
 		}
 
 		// implement magic factor for larger file systems?
-		if !plugin.MetricsMode {
-			fmt.Printf("%s ", plugin.PluginConfig.Name)
-		}
+		crit := 0
+		warn := 0
 		if s.UsedPercent >= plugin.Critical {
 			criticals++
-			metricGroups["disk.critical"].AddMetric(tags, float64(1), timeNow)
-			metricGroups["disk.warning"].AddMetric(tags, float64(0), timeNow)
-			if !plugin.MetricsMode {
-				fmt.Printf("CRITICAL: ")
-			}
-		} else if s.UsedPercent >= plugin.Warning {
+			crit = 1
+		}
+		if s.UsedPercent >= plugin.Warning {
 			warnings++
-			metricGroups["disk.critical"].AddMetric(tags, float64(0), timeNow)
-			metricGroups["disk.warning"].AddMetric(tags, float64(1), timeNow)
-			if !plugin.MetricsMode {
+			warn = 1
+		}
+		metricGroups["disk.critical"].AddMetric(tags, float64(crit), timeNow)
+		metricGroups["disk.warning"].AddMetric(tags, float64(warn), timeNow)
+		if !plugin.MetricsMode {
+			fmt.Printf("%s ", plugin.PluginConfig.Name)
+			if crit > 0 {
+				fmt.Printf("CRITICAL: ")
+			} else if warn > 0 {
 				fmt.Printf(" WARNING: ")
-			}
-		} else {
-			metricGroups["disk.critical"].AddMetric(tags, float64(0), timeNow)
-			metricGroups["disk.warning"].AddMetric(tags, float64(0), timeNow)
-			if !plugin.MetricsMode {
+			} else {
 				fmt.Printf("      OK: ")
 			}
-		}
-
-		if !plugin.MetricsMode {
 			if plugin.HumanReadable {
 				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
 					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
@@ -354,9 +349,23 @@ func executeCheck(event *types.Event) (int, error) {
 	for key, value := range extraTags {
 		tags[key] = value
 	}
-	tags["mountpoint"] = "all"
-	metricGroups["disk.critical"].AddMetric(tags, float64(criticals), timeNow)
-	metricGroups["disk.warning"].AddMetric(tags, float64(warnings), timeNow)
+	tags["mountpoint"] = "any"
+	anyCritical := func() float64 {
+		if criticals > 0 {
+			return 1
+		} else {
+			return 0
+		}
+	}()
+	metricGroups["disk.critical"].AddMetric(tags, anyCritical, timeNow)
+	anyWarning := func() float64 {
+		if warnings > 0 {
+			return 1
+		} else {
+			return 0
+		}
+	}()
+	metricGroups["disk.warning"].AddMetric(tags, anyWarning, timeNow)
 	if plugin.MetricsMode {
 		for _, g := range metricGroups {
 			g.Output()
