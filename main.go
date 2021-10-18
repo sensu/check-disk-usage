@@ -26,8 +26,50 @@ type Config struct {
 	FailOnError     bool
 	HumanReadable   bool
 	MetricsMode     bool
-	MetricsFormat   string
 	ExtraTags       []string
+}
+
+type MetricGroup struct {
+	Comment string
+	Type    string
+	Name    string
+	Metrics []Metric
+}
+
+func (g *MetricGroup) AddMetric(tags map[string]string, value float64, timeNow int64) {
+	g.Metrics = append(g.Metrics, Metric{
+		Tags:      tags,
+		Timestamp: timeNow,
+		Value:     value,
+	})
+}
+func (g *MetricGroup) Output() {
+	var output string
+	metricName := strings.Replace(g.Name, ".", "_", -1)
+	fmt.Printf("# HELP %s [%s] %s\n", metricName, g.Type, g.Comment)
+	fmt.Printf("# TYPE %s %s\n", metricName, g.Type)
+	for _, m := range g.Metrics {
+		tagStr := ""
+		for tag, tvalue := range m.Tags {
+			if len(tagStr) > 0 {
+				tagStr = tagStr + ","
+			}
+			tagStr = tagStr + tag + "=\"" + tvalue + "\""
+		}
+		if len(tagStr) > 0 {
+			tagStr = "{" + tagStr + "}"
+		}
+		output = strings.Join(
+			[]string{metricName + tagStr, fmt.Sprintf("%v", m.Value), strconv.FormatInt(m.Timestamp, 10)}, " ")
+		fmt.Println(output)
+	}
+	fmt.Println("")
+}
+
+type Metric struct {
+	Tags      map[string]string
+	Timestamp int64
+	Value     float64
 }
 
 var (
@@ -142,14 +184,6 @@ var (
 			Value:    &plugin.MetricsMode,
 		},
 		{
-			Path:     "metrics-format",
-			Env:      "",
-			Argument: "metrics-format",
-			Default:  "opentsdb_line",
-			Usage:    "Metrics output format, supports opentsdb_line or prometheus_text",
-			Value:    &plugin.MetricsFormat,
-		},
-		{
 			Path:     "tags",
 			Env:      "",
 			Argument: "tags",
@@ -192,10 +226,50 @@ func executeCheck(event *types.Event) (int, error) {
 		criticals int
 		warnings  int
 	)
+
 	timeNow := time.Now().Unix()
 	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
 		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partitions, error: %v", err)
+	}
+
+	metricGroups := map[string]*MetricGroup{
+		"disk.critical": &MetricGroup{
+			Name:    "disk.critical",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint is in critical state",
+			Metrics: []Metric{},
+		},
+		"disk.warning": &MetricGroup{
+			Name:    "disk.warning",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint is in warning state",
+			Metrics: []Metric{},
+		},
+		"disk.percent_used": &MetricGroup{
+			Name:    "disk.percent_usage",
+			Type:    "GAUGE",
+			Comment: "Percentage of mounted volume used",
+			Metrics: []Metric{},
+		},
+		"disk.total_bytes": &MetricGroup{
+			Name:    "disk.total_bytes",
+			Type:    "GAUGE",
+			Comment: "Total size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
+		"disk.used_bytes": &MetricGroup{
+			Name:    "disk.used_bytes",
+			Type:    "GAUGE",
+			Comment: "Used size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
+		"disk.free_bytes": &MetricGroup{
+			Name:    "disk.free_bytes",
+			Type:    "GAUGE",
+			Comment: "Free size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
 	}
 
 	for _, p := range parts {
@@ -242,21 +316,21 @@ func executeCheck(event *types.Event) (int, error) {
 		}
 		if s.UsedPercent >= plugin.Critical {
 			criticals++
-			addMetric("disk.critical", tags, fmt.Sprintf("%v", 1), timeNow)
-			addMetric("disk.warning", tags, fmt.Sprintf("%v", 0), timeNow)
+			metricGroups["disk.critical"].AddMetric(tags, float64(1), timeNow)
+			metricGroups["disk.warning"].AddMetric(tags, float64(0), timeNow)
 			if !plugin.MetricsMode {
 				fmt.Printf("CRITICAL: ")
 			}
 		} else if s.UsedPercent >= plugin.Warning {
 			warnings++
-			addMetric("disk.critical", tags, fmt.Sprintf("%v", 0), timeNow)
-			addMetric("disk.warning", tags, fmt.Sprintf("%v", 1), timeNow)
+			metricGroups["disk.critical"].AddMetric(tags, float64(0), timeNow)
+			metricGroups["disk.warning"].AddMetric(tags, float64(1), timeNow)
 			if !plugin.MetricsMode {
 				fmt.Printf(" WARNING: ")
 			}
 		} else {
-			addMetric("disk.critical", tags, fmt.Sprintf("%v", 0), timeNow)
-			addMetric("disk.warning", tags, fmt.Sprintf("%v", 0), timeNow)
+			metricGroups["disk.critical"].AddMetric(tags, float64(0), timeNow)
+			metricGroups["disk.warning"].AddMetric(tags, float64(0), timeNow)
 			if !plugin.MetricsMode {
 				fmt.Printf("      OK: ")
 			}
@@ -271,21 +345,21 @@ func executeCheck(event *types.Event) (int, error) {
 					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
 			}
 		}
-		addMetric("disk.percent_used", tags, fmt.Sprintf("%.3f", s.UsedPercent), timeNow)
-		addMetric("disk.total_bytes", tags, fmt.Sprintf("%v", s.Total), timeNow)
-		addMetric("disk.used_bytes", tags, fmt.Sprintf("%v", s.Used), timeNow)
-		addMetric("disk.free_bytes", tags, fmt.Sprintf("%v", s.Free), timeNow)
+		metricGroups["disk.percent_used"].AddMetric(tags, float64(s.UsedPercent), timeNow)
+		metricGroups["disk.total_bytes"].AddMetric(tags, float64(s.Total), timeNow)
+		metricGroups["disk.used_bytes"].AddMetric(tags, float64(s.Used), timeNow)
+		metricGroups["disk.free_bytes"].AddMetric(tags, float64(s.Free), timeNow)
 	}
 	tags = map[string]string{}
 	for key, value := range extraTags {
 		tags[key] = value
 	}
 	tags["mountpoint"] = "all"
-	addMetric("disk.critical", tags, fmt.Sprintf("%v", criticals), timeNow)
-	addMetric("disk.warning", tags, fmt.Sprintf("%v", warnings), timeNow)
+	metricGroups["disk.critical"].AddMetric(tags, float64(criticals), timeNow)
+	metricGroups["disk.warning"].AddMetric(tags, float64(warnings), timeNow)
 	if plugin.MetricsMode {
-		for _, metric := range metrics {
-			fmt.Println(metric)
+		for _, g := range metricGroups {
+			g.Output()
 		}
 
 	}
@@ -343,45 +417,4 @@ func contains(a []string, s string) bool {
 		}
 	}
 	return false
-}
-
-func addMetric(metricName string, tags map[string]string, value string, timeNow int64) {
-	switch plugin.MetricsFormat {
-	case "opentsdb_line":
-		addOpenTSDBMetric(metricName, tags, value, timeNow)
-	case "prometheus_text":
-		addPrometheusMetric(metricName, tags, value, timeNow)
-	default:
-		addOpenTSDBMetric(metricName, tags, value, timeNow)
-	}
-}
-
-func addOpenTSDBMetric(metricName string, tags map[string]string, value string, timeNow int64) {
-	tagStr := ""
-	for tag, tvalue := range tags {
-		if len(tagStr) > 0 {
-			tagStr = tagStr + " "
-		}
-		tagStr = tagStr + tag + "=" + tvalue
-	}
-	outputs := []string{metricName, strconv.FormatInt(timeNow, 10), value, tagStr}
-	//fmt.Println(strings.Join(outputs, " "))
-	metrics = append(metrics, strings.Join(outputs, " "))
-}
-
-func addPrometheusMetric(metricName string, tags map[string]string, value string, timeNow int64) {
-	tagStr := ""
-	for tag, tvalue := range tags {
-		if len(tagStr) > 0 {
-			tagStr = tagStr + ","
-		}
-		tagStr = tagStr + tag + "=\"" + tvalue + "\""
-	}
-	if len(tagStr) > 0 {
-		tagStr = "{" + tagStr + "}"
-	}
-	metricName = strings.Replace(metricName, ".", "_", -1)
-	outputs := []string{metricName + tagStr, value, strconv.FormatInt(timeNow, 10)}
-	//fmt.Println(strings.Join(outputs, " "))
-	metrics = append(metrics, strings.Join(outputs, " "))
 }
