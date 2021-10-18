@@ -73,7 +73,6 @@ type Metric struct {
 }
 
 var (
-	metrics   = []string{}
 	tags      = map[string]string{}
 	extraTags = map[string]string{}
 	plugin    = Config{
