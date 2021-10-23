@@ -366,10 +366,13 @@ func executeCheck(event *types.Event) (int, error) {
 	}()
 	metricGroups["disk.warning"].AddMetric(tags, anyWarning, timeNow)
 	if plugin.MetricsMode {
-		for _, g := range metricGroups {
-			g.Output()
-		}
-
+		// output metrics in a fixed order
+		metricGroups["disk.critical"].Output()
+		metricGroups["disk.warning"].Output()
+		metricGroups["disk.percent_used"].Output()
+		metricGroups["disk.total_bytes"].Output()
+		metricGroups["disk.used_bytes"].Output()
+		metricGroups["disk.free_bytes"].Output()
 	}
 	if criticals > 0 {
 		return sensu.CheckStateCritical, nil
