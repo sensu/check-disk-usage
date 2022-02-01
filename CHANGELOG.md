@@ -7,6 +7,9 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Fixed
+- Timestamp precision from second to millisecond
+
 ## [0.5.0] - 2021-10-18
 
 ### Added
