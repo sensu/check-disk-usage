@@ -226,7 +226,7 @@ func executeCheck(event *types.Event) (int, error) {
 		warnings  int
 	)
 
-	timeNow := time.Now().Unix()
+	timeNow := time.Now().UnixNano() / 1000000
 	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
 		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partitions, error: %v", err)
