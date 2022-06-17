@@ -359,7 +359,6 @@ func executeCheck(event *types.Event) (int, error) {
 		} else if s.UsedPercent >= bwarn {
 			warnings++
 			warn = 1
-		} else {
 		}
 		metricGroups["disk.critical"].AddMetric(tags, float64(crit), timeNow)
 		metricGroups["disk.warning"].AddMetric(tags, float64(warn), timeNow)
