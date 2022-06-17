@@ -5,10 +5,23 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
-## Unreleased
 
+
+## Unreleased
 ### Added
 - Implement magic scaling factor for large filesystems similar to original ruby plugin.
+
+## [0.7.0] - 2022-04-06
+
+### Fixed
+- Timestamp precision from second to millisecond
+
+## [0.5.0] - 2021-10-18
+
+### Added
+- Added --metrics option to change output into something Sensu agent can register as tagged metrics
+- Added --tags option to make it possible to add additional tags for all metrics
+>>>>>>> main
 - Added --human-readable option to support ignoring human-readable option like df unix/linux command
 
 ## [0.4.2] - 2021-03-31

@@ -49,6 +49,8 @@ Flags:
   -l, --minimum float             Minimum size to adjust (in GiB) (default 100)
   -n, --normal float              Value in GiB. Levels are not adapted for filesystems of exactly this size, where levels are reduced for smaller filesystems and raised for larger filesystems. (default 20)
   -H, --human-readable            print sizes in powers of 1024 (default false)
+      --metrics                   Output metrics instead of human readable output
+      --tags strings              Comma separated list of additional metrics tags using key=value format.
   -h, --help                      help for check-disk-usage
 
 Use "check-disk-usage [command] --help" for more information about a command.

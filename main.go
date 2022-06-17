@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
+	"time"
 
 	human "github.com/dustin/go-humanize"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
@@ -26,11 +28,58 @@ type Config struct {
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
-    HumanReadable   bool
+	HumanReadable   bool
+	MetricsMode     bool
+	ExtraTags       []string
+}
+
+type MetricGroup struct {
+	Comment string
+	Type    string
+	Name    string
+	Metrics []Metric
+}
+
+func (g *MetricGroup) AddMetric(tags map[string]string, value float64, timeNow int64) {
+	g.Metrics = append(g.Metrics, Metric{
+		Tags:      tags,
+		Timestamp: timeNow,
+		Value:     value,
+	})
+}
+func (g *MetricGroup) Output() {
+	var output string
+	metricName := strings.Replace(g.Name, ".", "_", -1)
+	fmt.Printf("# HELP %s [%s] %s\n", metricName, g.Type, g.Comment)
+	fmt.Printf("# TYPE %s %s\n", metricName, g.Type)
+	for _, m := range g.Metrics {
+		tagStr := ""
+		for tag, tvalue := range m.Tags {
+			if len(tagStr) > 0 {
+				tagStr = tagStr + ","
+			}
+			tagStr = tagStr + tag + "=\"" + tvalue + "\""
+		}
+		if len(tagStr) > 0 {
+			tagStr = "{" + tagStr + "}"
+		}
+		output = strings.Join(
+			[]string{metricName + tagStr, fmt.Sprintf("%v", m.Value), strconv.FormatInt(m.Timestamp, 10)}, " ")
+		fmt.Println(output)
+	}
+	fmt.Println("")
+}
+
+type Metric struct {
+	Tags      map[string]string
+	Timestamp int64
+	Value     float64
 }
 
 var (
-	plugin = Config{
+	tags      = map[string]string{}
+	extraTags = map[string]string{}
+	plugin    = Config{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "check-disk-usage",
 			Short:    "Cross platform disk usage check for Sensu",
@@ -158,7 +207,22 @@ var (
 			Usage:     "print sizes in powers of 1024 (default false)",
 			Value:     &plugin.HumanReadable,
 		},
-
+		{
+			Path:     "metrics",
+			Env:      "",
+			Argument: "metrics",
+			Default:  false,
+			Usage:    "Output metrics instead of human readable output",
+			Value:    &plugin.MetricsMode,
+		},
+		{
+			Path:     "tags",
+			Env:      "",
+			Argument: "tags",
+			Default:  []string{},
+			Usage:    "Comma separated list of additional metrics tags using key=value format.",
+			Value:    &plugin.ExtraTags,
+		},
 	}
 )
 
@@ -177,6 +241,15 @@ func checkArgs(event *types.Event) (int, error) {
 	if plugin.Warning >= plugin.Critical {
 		return sensu.CheckStateCritical, fmt.Errorf("--warning value can not be greater than or equal to --critical value")
 	}
+	for _, tagString := range plugin.ExtraTags {
+		fmt.Println(tagString)
+		parts := strings.Split(tagString, `=`)
+		if len(parts) == 2 {
+			extraTags[parts[0]] = parts[1]
+		} else {
+			return sensu.CheckStateCritical, fmt.Errorf("Failed to parse input tag: %s", tagString)
+		}
+	}
 	return sensu.CheckStateOK, nil
 }
 
@@ -186,12 +259,56 @@ func executeCheck(event *types.Event) (int, error) {
 		warnings  int
 	)
 
+	timeNow := time.Now().UnixNano() / 1000000
 	parts, err := disk.Partitions(plugin.IncludePseudo)
 	if err != nil {
 		return sensu.CheckStateCritical, fmt.Errorf("Failed to get partitions, error: %v", err)
 	}
 
+	metricGroups := map[string]*MetricGroup{
+		"disk.critical": &MetricGroup{
+			Name:    "disk.critical",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint usage is above critical threshold",
+			Metrics: []Metric{},
+		},
+		"disk.warning": &MetricGroup{
+			Name:    "disk.warning",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint usage is above warning threshold",
+			Metrics: []Metric{},
+		},
+		"disk.percent_used": &MetricGroup{
+			Name:    "disk.percent_usage",
+			Type:    "GAUGE",
+			Comment: "Percentage of mounted volume used",
+			Metrics: []Metric{},
+		},
+		"disk.total_bytes": &MetricGroup{
+			Name:    "disk.total_bytes",
+			Type:    "GAUGE",
+			Comment: "Total size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
+		"disk.used_bytes": &MetricGroup{
+			Name:    "disk.used_bytes",
+			Type:    "GAUGE",
+			Comment: "Used size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
+		"disk.free_bytes": &MetricGroup{
+			Name:    "disk.free_bytes",
+			Type:    "GAUGE",
+			Comment: "Free size in bytes of mounted volumed",
+			Metrics: []Metric{},
+		},
+	}
+
 	for _, p := range parts {
+		tags = map[string]string{}
+		for key, value := range extraTags {
+			tags[key] = value
+		}
 		// Ignore excluded (or non-included) file system types
 		if !isValidFSType(p.Fstype) {
 			continue
@@ -207,13 +324,16 @@ func executeCheck(event *types.Event) (int, error) {
 			continue
 		}
 
+		tags["mountpoint"] = p.Mountpoint
 		device := p.Mountpoint
 		s, err := disk.Usage(device)
 		if err != nil {
 			if plugin.FailOnError {
 				return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
 			}
-			fmt.Printf("%s  UNKNOWN: %s - error: %v\n", plugin.PluginConfig.Name, device, err)
+			if !plugin.MetricsMode {
+				fmt.Printf("%s  UNKNOWN: %s - error: %v\n", plugin.PluginConfig.Name, device, err)
+			}
 			continue
 		}
 
@@ -231,23 +351,70 @@ func executeCheck(event *types.Event) (int, error) {
 			bwarn = adjPercent(tot, plugin.Warning)
 		}
 
-		fmt.Printf("%s ", plugin.PluginConfig.Name)
+		crit := 0
+		warn := 0
 		if s.UsedPercent >= bcrit {
 			criticals++
-			fmt.Printf("CRITICAL: ")
+			crit = 1
 		} else if s.UsedPercent >= bwarn {
 			warnings++
-			fmt.Printf(" WARNING: ")
+			warn = 1
 		} else {
-			fmt.Printf("      OK: ")
 		}
-        if plugin.HumanReadable {
-		    fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
-        } else {
-            fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n", p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
-        }
+		metricGroups["disk.critical"].AddMetric(tags, float64(crit), timeNow)
+		metricGroups["disk.warning"].AddMetric(tags, float64(warn), timeNow)
+		if !plugin.MetricsMode {
+			fmt.Printf("%s ", plugin.PluginConfig.Name)
+			if crit > 0 {
+				fmt.Printf("CRITICAL: ")
+			} else if warn > 0 {
+				fmt.Printf(" WARNING: ")
+			} else {
+				fmt.Printf("      OK: ")
+			}
+			if plugin.HumanReadable {
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
+					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
+			} else {
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
+					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
+			}
+		}
+		metricGroups["disk.percent_used"].AddMetric(tags, float64(s.UsedPercent), timeNow)
+		metricGroups["disk.total_bytes"].AddMetric(tags, float64(s.Total), timeNow)
+		metricGroups["disk.used_bytes"].AddMetric(tags, float64(s.Used), timeNow)
+		metricGroups["disk.free_bytes"].AddMetric(tags, float64(s.Free), timeNow)
 	}
-
+	tags = map[string]string{}
+	for key, value := range extraTags {
+		tags[key] = value
+	}
+	tags["mountpoint"] = "any"
+	anyCritical := func() float64 {
+		if criticals > 0 {
+			return 1
+		} else {
+			return 0
+		}
+	}()
+	metricGroups["disk.critical"].AddMetric(tags, anyCritical, timeNow)
+	anyWarning := func() float64 {
+		if warnings > 0 {
+			return 1
+		} else {
+			return 0
+		}
+	}()
+	metricGroups["disk.warning"].AddMetric(tags, anyWarning, timeNow)
+	if plugin.MetricsMode {
+		// output metrics in a fixed order
+		metricGroups["disk.critical"].Output()
+		metricGroups["disk.warning"].Output()
+		metricGroups["disk.percent_used"].Output()
+		metricGroups["disk.total_bytes"].Output()
+		metricGroups["disk.used_bytes"].Output()
+		metricGroups["disk.free_bytes"].Output()
+	}
 	if criticals > 0 {
 		return sensu.CheckStateCritical, nil
 	} else if warnings > 0 {
