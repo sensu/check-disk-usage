@@ -327,6 +327,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 		tags["mountpoint"] = p.Mountpoint
 		device := p.Mountpoint
+		if len(device) == 0 {
+			continue
+		}
 		s, err := disk.Usage(device)
 		if err != nil {
 			if plugin.FailOnError {
