@@ -21,7 +21,6 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 ### Added
 - Added --metrics option to change output into something Sensu agent can register as tagged metrics
 - Added --tags option to make it possible to add additional tags for all metrics
->>>>>>> main
 - Added --human-readable option to support ignoring human-readable option like df unix/linux command
 
 ## [0.4.2] - 2021-03-31
