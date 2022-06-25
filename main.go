@@ -20,6 +20,7 @@ type Config struct {
 	ExcludeFSType   []string
 	IncludeFSPath   []string
 	ExcludeFSPath   []string
+	ExtraTags       []string
 	Warning         float64
 	Critical        float64
 	NormalGiB       float64
@@ -30,7 +31,7 @@ type Config struct {
 	FailOnError     bool
 	HumanReadable   bool
 	MetricsMode     bool
-	ExtraTags       []string
+	Verbose         bool
 }
 
 type MetricGroup struct {
@@ -353,6 +354,9 @@ func executeCheck(event *corev2.Event) (int, error) {
 
 		crit := 0
 		warn := 0
+		if plugin.Verbose {
+			fmt.Printf("tot: %v  used: %v crit: %v  warn: %v bcrit: %v bwarn: %v\n", tot, s.UsedPercent, plugin.Critical, plugin.Warning, bcrit, bwarn)
+		}
 		if s.UsedPercent >= bcrit {
 			criticals++
 			crit = 1
@@ -471,8 +475,27 @@ func contains(a []string, s string) bool {
 }
 
 func adjPercent(sizeInBytes float64, percent float64) float64 {
+	if sizeInBytes <= 0.0 {
+		return percent
+	}
+	if plugin.NormalGiB <= 0.0 {
+		return percent
+	}
+	if percent <= 0.0 {
+		return 0.0
+	}
 	hsize := (sizeInBytes / math.Pow(1024.0, 3)) / plugin.NormalGiB
 	felt := math.Pow(hsize, plugin.Magic)
 	scale := felt / hsize
-	return 100.0 - ((100.0 - percent) * scale)
+	adjustedPercent := 100.0 - ((100.0 - percent) * scale)
+	if plugin.Verbose {
+		fmt.Printf("hsize: %v felt: %v scale %v adjusted: %v\n", hsize, felt, scale, adjustedPercent)
+	}
+	if adjustedPercent < 0 {
+		return 0.0
+	}
+	if adjustedPercent > 100 {
+		return 100.0
+	}
+	return adjustedPercent
 }
