@@ -5,11 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic
 Versioning](http://semver.org/spec/v2.0.0.html).
 
-
-
 ## Unreleased
 ### Added
 - Implement magic scaling factor for large filesystems similar to original ruby plugin.
+
+### Fixed
+- corrected armv7 asset build filter in .bonsai.yml. Thanks @DJM0.
 
 ## [0.7.0] - 2022-04-06
 
