@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
 
 	human "github.com/dustin/go-humanize"
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
-	"github.com/sensu/sensu-go/types"
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
+	"github.com/sensu/sensu-plugin-sdk/sensu"
 	"github.com/shirou/gopsutil/disk"
 )
 
@@ -19,14 +20,18 @@ type Config struct {
 	ExcludeFSType   []string
 	IncludeFSPath   []string
 	ExcludeFSPath   []string
+	ExtraTags       []string
 	Warning         float64
 	Critical        float64
+	NormalGiB       float64
+	Magic           float64
+	MinimumGiB      float64
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
 	HumanReadable   bool
 	MetricsMode     bool
-	ExtraTags       []string
+	Verbose         bool
 }
 
 type MetricGroup struct {
@@ -83,8 +88,8 @@ var (
 		},
 	}
 
-	options = []*sensu.PluginConfigOption{
-		{
+	options = []sensu.ConfigOption{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "include-fs-type",
 			Env:       "",
 			Argument:  "include-fs-type",
@@ -93,7 +98,7 @@ var (
 			Usage:     "Comma separated list of file system types to check",
 			Value:     &plugin.IncludeFSType,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "exclude-fs-type",
 			Env:       "",
 			Argument:  "exclude-fs-type",
@@ -102,7 +107,7 @@ var (
 			Usage:     "Comma separated list of file system types to exclude from checking",
 			Value:     &plugin.ExcludeFSType,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "include-fs-path",
 			Env:       "",
 			Argument:  "include-fs-path",
@@ -111,7 +116,7 @@ var (
 			Usage:     "Comma separated list of file system paths to check",
 			Value:     &plugin.IncludeFSPath,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "exclude-fs-path",
 			Env:       "",
 			Argument:  "exclude-fs-path",
@@ -120,7 +125,7 @@ var (
 			Usage:     "Comma separated list of file system paths to exclude from checking",
 			Value:     &plugin.ExcludeFSPath,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "warning",
 			Env:       "",
 			Argument:  "warning",
@@ -129,7 +134,7 @@ var (
 			Usage:     "Warning threshold for file system usage",
 			Value:     &plugin.Warning,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "critical",
 			Env:       "",
 			Argument:  "critical",
@@ -138,7 +143,36 @@ var (
 			Usage:     "Critical threshold for file system usage",
 			Value:     &plugin.Critical,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
+			Path:      "normal",
+			Env:       "",
+			Argument:  "normal",
+			Shorthand: "n",
+			Default:   float64(20),
+			Usage: `Value in GiB. Levels are not adapted for filesystems of exactly this ` +
+				`size, where levels are reduced for smaller filesystems and raised ` +
+				`for larger filesystems.`,
+			Value: &plugin.NormalGiB,
+		},
+		&sensu.PluginConfigOption[float64]{
+			Path:      "magic",
+			Env:       "",
+			Argument:  "magic",
+			Shorthand: "m",
+			Default:   float64(1),
+			Usage:     `Magic factor to adjust warn/crit thresholds. Example: .9`,
+			Value:     &plugin.Magic,
+		},
+		&sensu.PluginConfigOption[float64]{
+			Path:      "minimum",
+			Env:       "",
+			Argument:  "minimum",
+			Shorthand: "l",
+			Default:   float64(100),
+			Usage:     `Minimum size to adjust (in GiB)`,
+			Value:     &plugin.MinimumGiB,
+		},
+		&sensu.PluginConfigOption[bool]{
 			Path:      "include-pseudo-fs",
 			Env:       "",
 			Argument:  "include-pseudo-fs",
@@ -147,7 +181,7 @@ var (
 			Usage:     "Include pseudo-filesystems (e.g. tmpfs) (default false)",
 			Value:     &plugin.IncludePseudo,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "fail-on-error",
 			Env:       "",
 			Argument:  "fail-on-error",
@@ -156,7 +190,7 @@ var (
 			Usage:     "Fail and exit on errors getting file system usage (e.g. permission denied) (default false)",
 			Value:     &plugin.FailOnError,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "include-read-only",
 			Env:       "",
 			Argument:  "include-read-only",
@@ -165,7 +199,7 @@ var (
 			Usage:     "Include read-only filesystems (default false)",
 			Value:     &plugin.IncludeReadOnly,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "human-readable",
 			Env:       "",
 			Argument:  "human-readable",
@@ -174,7 +208,7 @@ var (
 			Usage:     "print sizes in powers of 1024 (default false)",
 			Value:     &plugin.HumanReadable,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:     "metrics",
 			Env:      "",
 			Argument: "metrics",
@@ -182,7 +216,7 @@ var (
 			Usage:    "Output metrics instead of human readable output",
 			Value:    &plugin.MetricsMode,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:     "tags",
 			Env:      "",
 			Argument: "tags",
@@ -198,7 +232,7 @@ func main() {
 	check.Execute()
 }
 
-func checkArgs(event *types.Event) (int, error) {
+func checkArgs(event *corev2.Event) (int, error) {
 	if len(plugin.IncludeFSType) > 0 && len(plugin.ExcludeFSType) > 0 {
 		return sensu.CheckStateCritical, fmt.Errorf("--include-fs-type and --exclude-fs-type are mutually exclusive")
 	}
@@ -220,7 +254,7 @@ func checkArgs(event *types.Event) (int, error) {
 	return sensu.CheckStateOK, nil
 }
 
-func executeCheck(event *types.Event) (int, error) {
+func executeCheck(event *corev2.Event) (int, error) {
 	var (
 		criticals int
 		warnings  int
@@ -293,13 +327,16 @@ func executeCheck(event *types.Event) (int, error) {
 
 		tags["mountpoint"] = p.Mountpoint
 		device := p.Mountpoint
+		if len(device) == 0 {
+			continue
+		}
 		s, err := disk.Usage(device)
 		if err != nil {
 			if plugin.FailOnError {
 				return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
 			}
 			if !plugin.MetricsMode {
-				fmt.Printf("%s  UNKNOWN: %s - error: %v\n", plugin.PluginConfig.Name, device, err)
+				fmt.Printf("%s  UNKNOWN: dev: <%s> - error: %v\n", plugin.PluginConfig.Name, device, err)
 			}
 			continue
 		}
@@ -310,13 +347,23 @@ func executeCheck(event *types.Event) (int, error) {
 		}
 
 		// implement magic factor for larger file systems?
+		tot := float64(s.Total)
+		bcrit := plugin.Critical
+		bwarn := plugin.Warning
+		if tot > (plugin.MinimumGiB * math.Pow(1024, 3)) {
+			bcrit = adjPercent(tot, plugin.Critical)
+			bwarn = adjPercent(tot, plugin.Warning)
+		}
+
 		crit := 0
 		warn := 0
-		if s.UsedPercent >= plugin.Critical {
+		if plugin.Verbose {
+			fmt.Printf("tot: %v  used: %v crit: %v  warn: %v bcrit: %v bwarn: %v\n", tot, s.UsedPercent, plugin.Critical, plugin.Warning, bcrit, bwarn)
+		}
+		if s.UsedPercent >= bcrit {
 			criticals++
 			crit = 1
-		}
-		if s.UsedPercent >= plugin.Warning {
+		} else if s.UsedPercent >= bwarn {
 			warnings++
 			warn = 1
 		}
@@ -428,4 +475,30 @@ func contains(a []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func adjPercent(sizeInBytes float64, percent float64) float64 {
+	if sizeInBytes <= 0.0 {
+		return percent
+	}
+	if plugin.NormalGiB <= 0.0 {
+		return percent
+	}
+	if percent <= 0.0 {
+		return 0.0
+	}
+	hsize := (sizeInBytes / math.Pow(1024.0, 3)) / plugin.NormalGiB
+	felt := math.Pow(hsize, plugin.Magic)
+	scale := felt / hsize
+	adjustedPercent := 100.0 - ((100.0 - percent) * scale)
+	if plugin.Verbose {
+		fmt.Printf("hsize: %v felt: %v scale %v adjusted: %v\n", hsize, felt, scale, adjustedPercent)
+	}
+	if adjustedPercent < 0 {
+		return 0.0
+	}
+	if adjustedPercent > 100 {
+		return 100.0
+	}
+	return adjustedPercent
 }
