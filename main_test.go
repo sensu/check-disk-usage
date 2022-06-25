@@ -129,6 +129,7 @@ func TestCheckArgs(t *testing.T) {
 func TestExecuteCheck(t *testing.T) {
 	clearOptions()
 	plugin.MetricsMode = true
+	plugin.ExcludeFSPath = []string{"/dev"}
 	assert := assert.New(t)
 	event := corev2.FixtureEvent("entity1", "check1")
 	i, e := executeCheck(event)

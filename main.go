@@ -333,7 +333,7 @@ func executeCheck(event *corev2.Event) (int, error) {
 				return sensu.CheckStateCritical, fmt.Errorf("Failed to get disk usage for %s, error: %v", device, err)
 			}
 			if !plugin.MetricsMode {
-				fmt.Printf("%s  UNKNOWN: %s - error: %v\n", plugin.PluginConfig.Name, device, err)
+				fmt.Printf("%s  UNKNOWN: dev: <%s> - error: %v\n", plugin.PluginConfig.Name, device, err)
 			}
 			continue
 		}
