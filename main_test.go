@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	corev2 "github.com/sensu/sensu-go/api/core/v2"
+	"github.com/sensu/sensu-plugin-sdk/sensu"
 	"github.com/stretchr/testify/assert"
 )
 

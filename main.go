@@ -8,8 +8,8 @@ import (
 	"time"
 
 	human "github.com/dustin/go-humanize"
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
-	"github.com/sensu/sensu-go/types"
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
+	"github.com/sensu/sensu-plugin-sdk/sensu"
 	"github.com/shirou/gopsutil/disk"
 )
 
@@ -87,8 +87,8 @@ var (
 		},
 	}
 
-	options = []*sensu.PluginConfigOption{
-		{
+	options = []sensu.ConfigOption{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "include-fs-type",
 			Env:       "",
 			Argument:  "include-fs-type",
@@ -97,7 +97,7 @@ var (
 			Usage:     "Comma separated list of file system types to check",
 			Value:     &plugin.IncludeFSType,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "exclude-fs-type",
 			Env:       "",
 			Argument:  "exclude-fs-type",
@@ -106,7 +106,7 @@ var (
 			Usage:     "Comma separated list of file system types to exclude from checking",
 			Value:     &plugin.ExcludeFSType,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "include-fs-path",
 			Env:       "",
 			Argument:  "include-fs-path",
@@ -115,7 +115,7 @@ var (
 			Usage:     "Comma separated list of file system paths to check",
 			Value:     &plugin.IncludeFSPath,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:      "exclude-fs-path",
 			Env:       "",
 			Argument:  "exclude-fs-path",
@@ -124,7 +124,7 @@ var (
 			Usage:     "Comma separated list of file system paths to exclude from checking",
 			Value:     &plugin.ExcludeFSPath,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "warning",
 			Env:       "",
 			Argument:  "warning",
@@ -133,7 +133,7 @@ var (
 			Usage:     "Warning threshold for file system usage",
 			Value:     &plugin.Warning,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "critical",
 			Env:       "",
 			Argument:  "critical",
@@ -142,7 +142,7 @@ var (
 			Usage:     "Critical threshold for file system usage",
 			Value:     &plugin.Critical,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "normal",
 			Env:       "",
 			Argument:  "normal",
@@ -153,7 +153,7 @@ var (
 				`for larger filesystems.`,
 			Value: &plugin.NormalGiB,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "magic",
 			Env:       "",
 			Argument:  "magic",
@@ -162,7 +162,7 @@ var (
 			Usage:     `Magic factor to adjust warn/crit thresholds. Example: .9`,
 			Value:     &plugin.Magic,
 		},
-		{
+		&sensu.PluginConfigOption[float64]{
 			Path:      "minimum",
 			Env:       "",
 			Argument:  "minimum",
@@ -171,7 +171,7 @@ var (
 			Usage:     `Minimum size to adjust (in GiB)`,
 			Value:     &plugin.MinimumGiB,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "include-pseudo-fs",
 			Env:       "",
 			Argument:  "include-pseudo-fs",
@@ -180,7 +180,7 @@ var (
 			Usage:     "Include pseudo-filesystems (e.g. tmpfs) (default false)",
 			Value:     &plugin.IncludePseudo,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "fail-on-error",
 			Env:       "",
 			Argument:  "fail-on-error",
@@ -189,7 +189,7 @@ var (
 			Usage:     "Fail and exit on errors getting file system usage (e.g. permission denied) (default false)",
 			Value:     &plugin.FailOnError,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "include-read-only",
 			Env:       "",
 			Argument:  "include-read-only",
@@ -198,7 +198,7 @@ var (
 			Usage:     "Include read-only filesystems (default false)",
 			Value:     &plugin.IncludeReadOnly,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:      "human-readable",
 			Env:       "",
 			Argument:  "human-readable",
@@ -207,7 +207,7 @@ var (
 			Usage:     "print sizes in powers of 1024 (default false)",
 			Value:     &plugin.HumanReadable,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:     "metrics",
 			Env:      "",
 			Argument: "metrics",
@@ -215,7 +215,7 @@ var (
 			Usage:    "Output metrics instead of human readable output",
 			Value:    &plugin.MetricsMode,
 		},
-		{
+		&sensu.SlicePluginConfigOption[string]{
 			Path:     "tags",
 			Env:      "",
 			Argument: "tags",
@@ -231,7 +231,7 @@ func main() {
 	check.Execute()
 }
 
-func checkArgs(event *types.Event) (int, error) {
+func checkArgs(event *corev2.Event) (int, error) {
 	if len(plugin.IncludeFSType) > 0 && len(plugin.ExcludeFSType) > 0 {
 		return sensu.CheckStateCritical, fmt.Errorf("--include-fs-type and --exclude-fs-type are mutually exclusive")
 	}
@@ -253,7 +253,7 @@ func checkArgs(event *types.Event) (int, error) {
 	return sensu.CheckStateOK, nil
 }
 
-func executeCheck(event *types.Event) (int, error) {
+func executeCheck(event *corev2.Event) (int, error) {
 	var (
 		criticals int
 		warnings  int
