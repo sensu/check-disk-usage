@@ -1,4 +1,4 @@
-module github.com/nixwiz/check-disk-usage
+module github.com/sensu/check-disk-usage
 
 go 1.18
 
