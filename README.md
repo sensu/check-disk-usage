@@ -116,6 +116,7 @@ spec:
     --critical 95
   subscriptions:
   - system
+  interval: 60
   runtime_assets:
   - sensu/check-disk-usage
 ```
@@ -137,6 +138,7 @@ spec:
     --critical 95
   subscriptions:
   - system
+  interval: 60
   runtime_assets:
   - sensu/check-disk-usage
 ```
