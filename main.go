@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -398,16 +399,24 @@ func isValidFSType(fsType string) bool {
 }
 
 func isValidFSPath(fsPath string) bool {
-	// should i account for case insensitive searches for windows (c: vs. C:)?
-	if len(plugin.IncludeFSPath) > 0 && contains(plugin.IncludeFSPath, fsPath) {
-		return true
-	} else if len(plugin.IncludeFSPath) > 0 {
-		return false
-	} else if len(plugin.ExcludeFSPath) > 0 && contains(plugin.ExcludeFSPath, fsPath) {
-		return false
+	// Check if this file system path is in the ExcludeFSPath list.
+	// If it matches any of the exclusion patterns, it is not valid.
+	for _, pattern := range plugin.ExcludeFSPath {
+		if matched, _ := filepath.Match(pattern, fsPath); matched {
+			return false
+		}
 	}
-
-	// either not in exclude list or neither list is specified
+	// If we have IncludeFSPath, then the file system must match one of the patterns
+	// to be considered valid.
+	if len(plugin.IncludeFSPath) > 0 {
+		for _, pattern := range plugin.IncludeFSPath {
+			if matched, _ := filepath.Match(pattern, fsPath); matched {
+				return true
+			}
+		}
+		return false // no patterns matched
+	}
+	// If no includes or matches against excludes, then it's valid.
 	return true
 }
 
