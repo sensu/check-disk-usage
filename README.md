@@ -24,6 +24,7 @@ system types.
 ## Usage
 
 ### Help output
+
 ```
 Cross platform disk usage check for Sensu
 
@@ -36,19 +37,21 @@ Available Commands:
   version     Print the version number of this plugin
 
 Flags:
-  -i, --include-fs-type strings   Comma separated list of file system types to check
-  -e, --exclude-fs-type strings   Comma separated list of file system types to exclude from checking
-  -I, --include-fs-path strings   Comma separated list of file system paths to check
-  -E, --exclude-fs-path strings   Comma separated list of file system paths to exclude from checking
-  -w, --warning float             Warning threshold for file system usage (default 85)
   -c, --critical float            Critical threshold for file system usage (default 95)
+  -E, --exclude-fs-path strings   Comma separated list of file system paths to exclude from checking
+  -e, --exclude-fs-type strings   Comma separated list of file system types to exclude from checking
+  -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
+  -h, --help                      help for check-disk-usage
+  -H, --human-readable            print sizes in powers of 1024 (default false)
+  -I, --include-fs-path strings   Comma separated list of file system paths to check
+  -i, --include-fs-type strings   Comma separated list of file system types to check
   -p, --include-pseudo-fs         Include pseudo-filesystems (e.g. tmpfs) (default false)
   -r, --include-read-only         Include read-only filesystems (default false)
-  -f, --fail-on-error             Fail and exit on errors getting file system usage (e.g. permission denied) (default false)
-  -H, --human-readable            print sizes in powers of 1024 (default false)
+  -K, --inodescritical float      Critical threshold for filesystem inode usage (default 85)
+  -W, --inodeswarning float       Warning threshold for filesystem inode usage (default 85)
       --metrics                   Output metrics instead of human readable output
       --tags strings              Comma separated list of additional metrics tags using key=value format.
-  -h, --help                      help for check-disk-usage
+  -w, --warning float             Warning threshold for file system usage (default 85)
 
 Use "check-disk-usage [command] --help" for more information about a command.
 ```
