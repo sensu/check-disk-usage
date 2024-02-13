@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/dustin/go-humanize v1.0.1
-	github.com/sensu-community/sensu-plugin-sdk v0.11.0
+	github.com/sensu/sensu-plugin-sdk v0.11.0
 	github.com/sensu/sensu-go/api/core/v2 v2.3.0
 	github.com/sensu/sensu-go/types v0.3.0
 	github.com/shirou/gopsutil v3.20.11+incompatible
