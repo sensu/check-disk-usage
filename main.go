@@ -271,34 +271,34 @@ func executeCheck(event *types.Event) (int, error) {
 			Comment: "Percentage of mounted volume used",
 			Metrics: []Metric{},
 		},
-		"disk.inodescritical": &MetricGroup{
-			Name:    "disk.inodescritical",
+		"disk.free_inodes": &MetricGroup{
+			Name:    "disk.free_inodes",
 			Type:    "GAUGE",
-			Comment: "non-zero value indicates mountpoint inode usage is above critical threshold",
+			Comment: "Total amount of inodes free on mounted volumes",
 			Metrics: []Metric{},
 		},
-		"disk.inodeswarning": &MetricGroup{
-			Name:    "disk.inodeswarning",
+		"disk.used_inodes": &MetricGroup{
+			Name:    "disk.used_inodes",
 			Type:    "GAUGE",
-			Comment: "non-zero value indicates mountpoint inode usage is above warning threshold",
+			Comment: "Total amount of inodes used on mounted volumes",
 			Metrics: []Metric{},
 		},
 		"disk.total_bytes": &MetricGroup{
 			Name:    "disk.total_bytes",
 			Type:    "GAUGE",
-			Comment: "Total size in bytes of mounted volumed",
+			Comment: "Total size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 		"disk.used_bytes": &MetricGroup{
 			Name:    "disk.used_bytes",
 			Type:    "GAUGE",
-			Comment: "Used size in bytes of mounted volumed",
+			Comment: "Used size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 		"disk.free_bytes": &MetricGroup{
 			Name:    "disk.free_bytes",
 			Type:    "GAUGE",
-			Comment: "Free size in bytes of mounted volumed",
+			Comment: "Free size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 	}
@@ -383,6 +383,8 @@ func executeCheck(event *types.Event) (int, error) {
 		metricGroups["disk.total_bytes"].AddMetric(tags, float64(s.Total), timeNow)
 		metricGroups["disk.used_bytes"].AddMetric(tags, float64(s.Used), timeNow)
 		metricGroups["disk.free_bytes"].AddMetric(tags, float64(s.Free), timeNow)
+		metricGroups["disk.used_inodes"].AddMetric(tags, float64(s.InodesUsed), timeNow)
+		metricGroups["disk.free_inodes"].AddMetric(tags, float64(s.InodesFree), timeNow)
 	}
 	tags = map[string]string{}
 	for key, value := range extraTags {
@@ -413,6 +415,9 @@ func executeCheck(event *types.Event) (int, error) {
 		metricGroups["disk.total_bytes"].Output()
 		metricGroups["disk.used_bytes"].Output()
 		metricGroups["disk.free_bytes"].Output()
+		metricGroups["disk.used_inodes"].Output()
+		metricGroups["disk.free_inodes"].Output()
+
 	}
 	if criticals > 0 {
 		return sensu.CheckStateCritical, nil
