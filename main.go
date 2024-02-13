@@ -21,6 +21,8 @@ type Config struct {
 	ExcludeFSPath   []string
 	Warning         float64
 	Critical        float64
+	InodesCritical  float64
+	InodesWarning   float64
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
@@ -139,6 +141,24 @@ var (
 			Value:     &plugin.Critical,
 		},
 		{
+			Path:      "critical",
+			Env:       "",
+			Argument:  "inodescritical",
+			Shorthand: "K",
+			Default:   float64(85),
+			Usage:     "Critical threshold for filesystem inode usage",
+			Value:     &plugin.InodesCritical,
+		},
+		{
+			Path:      "warning",
+			Env:       "",
+			Argument:  "inodeswarning",
+			Shorthand: "W",
+			Default:   float64(85),
+			Usage:     "Warning threshold for filesystem inode usage",
+			Value:     &plugin.InodesWarning,
+		},
+		{
 			Path:      "include-pseudo-fs",
 			Env:       "",
 			Argument:  "include-pseudo-fs",
@@ -251,6 +271,18 @@ func executeCheck(event *types.Event) (int, error) {
 			Comment: "Percentage of mounted volume used",
 			Metrics: []Metric{},
 		},
+		"disk.inodescritical": &MetricGroup{
+			Name:    "disk.inodescritical",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint inode usage is above critical threshold",
+			Metrics: []Metric{},
+		},
+		"disk.inodeswarning": &MetricGroup{
+			Name:    "disk.inodeswarning",
+			Type:    "GAUGE",
+			Comment: "non-zero value indicates mountpoint inode usage is above warning threshold",
+			Metrics: []Metric{},
+		},
 		"disk.total_bytes": &MetricGroup{
 			Name:    "disk.total_bytes",
 			Type:    "GAUGE",
@@ -320,6 +352,14 @@ func executeCheck(event *types.Event) (int, error) {
 			warnings++
 			warn = 1
 		}
+		if s.InodesUsedPercent >= plugin.InodesCritical {
+			criticals++
+			crit = 1
+		}
+		if s.InodesUsedPercent >= plugin.InodesWarning {
+			warnings++
+			warn = 1
+		}
 		metricGroups["disk.critical"].AddMetric(tags, float64(crit), timeNow)
 		metricGroups["disk.warning"].AddMetric(tags, float64(warn), timeNow)
 		if !plugin.MetricsMode {
@@ -332,11 +372,11 @@ func executeCheck(event *types.Event) (int, error) {
 				fmt.Printf("      OK: ")
 			}
 			if plugin.HumanReadable {
-				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
-					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s, Inodes Used: %.2f%%\n",
+					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free), s.InodesUsedPercent)
 			} else {
-				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
-					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s, Inodes Used: %.2f%%\n",
+					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free), s.InodesUsedPercent)
 			}
 		}
 		metricGroups["disk.percent_used"].AddMetric(tags, float64(s.UsedPercent), timeNow)
