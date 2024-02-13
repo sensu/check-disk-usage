@@ -21,6 +21,8 @@ type Config struct {
 	ExcludeFSPath   []string
 	Warning         float64
 	Critical        float64
+	InodesCritical  float64
+	InodesWarning   float64
 	IncludePseudo   bool
 	IncludeReadOnly bool
 	FailOnError     bool
@@ -139,6 +141,24 @@ var (
 			Value:     &plugin.Critical,
 		},
 		{
+			Path:      "critical",
+			Env:       "",
+			Argument:  "inodescritical",
+			Shorthand: "K",
+			Default:   float64(85),
+			Usage:     "Critical threshold for filesystem inode usage",
+			Value:     &plugin.InodesCritical,
+		},
+		{
+			Path:      "warning",
+			Env:       "",
+			Argument:  "inodeswarning",
+			Shorthand: "W",
+			Default:   float64(85),
+			Usage:     "Warning threshold for filesystem inode usage",
+			Value:     &plugin.InodesWarning,
+		},
+		{
 			Path:      "include-pseudo-fs",
 			Env:       "",
 			Argument:  "include-pseudo-fs",
@@ -251,22 +271,34 @@ func executeCheck(event *types.Event) (int, error) {
 			Comment: "Percentage of mounted volume used",
 			Metrics: []Metric{},
 		},
+		"disk.free_inodes": &MetricGroup{
+			Name:    "disk.free_inodes",
+			Type:    "GAUGE",
+			Comment: "Total amount of inodes free on mounted volumes",
+			Metrics: []Metric{},
+		},
+		"disk.used_inodes": &MetricGroup{
+			Name:    "disk.used_inodes",
+			Type:    "GAUGE",
+			Comment: "Total amount of inodes used on mounted volumes",
+			Metrics: []Metric{},
+		},
 		"disk.total_bytes": &MetricGroup{
 			Name:    "disk.total_bytes",
 			Type:    "GAUGE",
-			Comment: "Total size in bytes of mounted volumed",
+			Comment: "Total size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 		"disk.used_bytes": &MetricGroup{
 			Name:    "disk.used_bytes",
 			Type:    "GAUGE",
-			Comment: "Used size in bytes of mounted volumed",
+			Comment: "Used size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 		"disk.free_bytes": &MetricGroup{
 			Name:    "disk.free_bytes",
 			Type:    "GAUGE",
-			Comment: "Free size in bytes of mounted volumed",
+			Comment: "Free size in bytes of mounted volumes",
 			Metrics: []Metric{},
 		},
 	}
@@ -320,6 +352,14 @@ func executeCheck(event *types.Event) (int, error) {
 			warnings++
 			warn = 1
 		}
+		if s.InodesUsedPercent >= plugin.InodesCritical {
+			criticals++
+			crit = 1
+		}
+		if s.InodesUsedPercent >= plugin.InodesWarning {
+			warnings++
+			warn = 1
+		}
 		metricGroups["disk.critical"].AddMetric(tags, float64(crit), timeNow)
 		metricGroups["disk.warning"].AddMetric(tags, float64(warn), timeNow)
 		if !plugin.MetricsMode {
@@ -332,17 +372,19 @@ func executeCheck(event *types.Event) (int, error) {
 				fmt.Printf("      OK: ")
 			}
 			if plugin.HumanReadable {
-				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
-					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free))
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s, Inodes Used: %.2f%%\n",
+					p.Mountpoint, s.UsedPercent, human.IBytes(s.Total), human.IBytes(s.Used), human.IBytes(s.Free), s.InodesUsedPercent)
 			} else {
-				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s\n",
-					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free))
+				fmt.Printf("%s %.2f%% - Total: %s, Used: %s, Free: %s, Inodes Used: %.2f%%\n",
+					p.Mountpoint, s.UsedPercent, human.Bytes(s.Total), human.Bytes(s.Used), human.Bytes(s.Free), s.InodesUsedPercent)
 			}
 		}
 		metricGroups["disk.percent_used"].AddMetric(tags, float64(s.UsedPercent), timeNow)
 		metricGroups["disk.total_bytes"].AddMetric(tags, float64(s.Total), timeNow)
 		metricGroups["disk.used_bytes"].AddMetric(tags, float64(s.Used), timeNow)
 		metricGroups["disk.free_bytes"].AddMetric(tags, float64(s.Free), timeNow)
+		metricGroups["disk.used_inodes"].AddMetric(tags, float64(s.InodesUsed), timeNow)
+		metricGroups["disk.free_inodes"].AddMetric(tags, float64(s.InodesFree), timeNow)
 	}
 	tags = map[string]string{}
 	for key, value := range extraTags {
@@ -373,6 +415,9 @@ func executeCheck(event *types.Event) (int, error) {
 		metricGroups["disk.total_bytes"].Output()
 		metricGroups["disk.used_bytes"].Output()
 		metricGroups["disk.free_bytes"].Output()
+		metricGroups["disk.used_inodes"].Output()
+		metricGroups["disk.free_inodes"].Output()
+
 	}
 	if criticals > 0 {
 		return sensu.CheckStateCritical, nil
